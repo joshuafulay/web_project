@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en" class="min-h-screen">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetDocuPrint — Circuit Commissioning & Audit Suite</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Chart.js, QRCode.js & html2pdf.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Helvetica', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+            display: ['Helvetica', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+            mono: ['Helvetica', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+            serif: ['Helvetica', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="min-h-screen w-full overflow-x-hidden bg-[#121314] text-slate-100 font-sans antialiased">
+
+  <!-- STICKY TOP NAVIGATION BAR -->
+  <header id="main-header" class="no-print sticky top-0 z-50 w-full bg-[#121314]/95 backdrop-blur-md border-b border-[#2a2c30] text-slate-100">
+    <div class="max-w-[1440px] mx-auto h-16 px-4 sm:px-8 flex items-center justify-between gap-4">
+      
+      <!-- Brand Mark -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="switchScreen('home')">
+        <svg class="w-7 h-7 flex-shrink-0" viewBox="0 0 32 32" fill="none">
+          <polygon points="16,3 28,10 16,17 4,10" fill="#ff8b60"/>
+          <polygon points="4,10 16,17 16,30 4,23" fill="#f26b3a"/>
+          <polygon points="28,10 16,17 16,30 28,23" fill="#c2491d"/>
+        </svg>
+        <span class="text-sm sm:text-base font-bold tracking-tight text-white">NetDocuPrint</span>
+      </div>
+
+      <!-- Center Navigation -->
+      <nav class="hidden lg:flex items-center gap-6 h-full">
+        <button onclick="switchScreen('home')" id="nav-home" class="h-full text-xs font-semibold transition cursor-pointer text-[#f26b3a] border-b-2 border-[#f26b3a] px-1 flex items-center gap-1.5">
+          Overview
+        </button>
+        <button onclick="switchScreen('studio')" id="nav-studio" class="h-full text-xs font-medium text-slate-300 hover:text-white border-b-2 border-transparent transition cursor-pointer px-1 flex items-center gap-1.5">
+          Handover Studio
+        </button>
+        <button onclick="switchScreen('vault')" id="nav-vault" class="h-full text-xs font-medium text-slate-300 hover:text-white border-b-2 border-transparent transition cursor-pointer px-1 flex items-center gap-1.5">
+          Records (<span id="nav-record-count">0</span>)
+        </button>
+        <button onclick="switchScreen('analytics')" id="nav-analytics" class="h-full text-xs font-medium text-slate-300 hover:text-white border-b-2 border-transparent transition cursor-pointer px-1 flex items-center gap-1.5">
+          Analytics
+        </button>
+        <button onclick="switchScreen('tools')" id="nav-tools" class="h-full text-xs font-medium text-slate-300 hover:text-white border-b-2 border-transparent transition cursor-pointer px-1 flex items-center gap-1.5">
+          Field Calculators
+        </button>
+      </nav>
+
+      <!-- Right Status & Primary CTA -->
+      <div class="flex items-center gap-2.5">
+        <div id="backend-status-badge" class="hidden sm:inline-flex items-center gap-2 bg-[#1c1e20] border border-[#2f3236] px-3 py-1.5 rounded-none text-[11px] font-mono text-slate-200">
+          <span id="backend-status-dot" class="w-2 h-2 rounded-none bg-amber-400 animate-pulse"></span>
+          <span id="backend-status-text">Checking API...</span>
+        </div>
+
+        <button type="button" onclick="createNewWorkOrder(); switchScreen('studio');" class="bg-[#f26b3a] hover:bg-[#e05a2b] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-none transition cursor-pointer flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-plus text-[11px]"></i> New Circuit
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE / TABLET BOTTOM NAV BAR -->
+  <div class="no-print lg:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-50 bg-[#191a1c]/95 backdrop-blur-md text-slate-100 px-3 py-2 rounded-none border border-[#323539] flex items-center gap-1.5 text-[11px] font-semibold shadow-xl">
+    <button id="mnav-home" onclick="switchScreen('home')" class="bg-[#f26b3a] text-white px-3 py-1 rounded-none cursor-pointer">Home</button>
+    <button id="mnav-studio" onclick="switchScreen('studio')" class="text-slate-200 px-3 py-1 rounded-none cursor-pointer">Studio</button>
+    <button id="mnav-vault" onclick="switchScreen('vault')" class="text-slate-200 px-3 py-1 rounded-none cursor-pointer">Records</button>
+    <button id="mnav-analytics" onclick="switchScreen('analytics')" class="text-slate-200 px-3 py-1 rounded-none cursor-pointer">Analytics</button>
+    <button id="mnav-tools" onclick="switchScreen('tools')" class="text-slate-200 px-3 py-1 rounded-none cursor-pointer">Tools</button>
+  </div>
+
+  <!-- ======================================================================
+       SCREEN 0: LANDING / MAIN PAGE
+       ====================================================================== -->
+  <section id="screen-home" class="w-full bg-[#121314] text-slate-100 pb-24 overflow-hidden">
+    
+    <!-- HERO SECTION WITH DIAGONAL BACKDROP & 3D GEOMETRIC ILLUSTRATION -->
+    <div class="relative w-full overflow-hidden">
+      <!-- Diagonal Geometric Background Plane -->
+      <div class="hero-diagonal-bg pointer-events-none"></div>
+
+      <!-- Top-Right Circular Radial Dot Ring Accent -->
+      <svg class="hidden md:block absolute top-6 right-8 w-24 h-24 opacity-80 pointer-events-none" viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="14" r="3.5" fill="#e2e8f0"/>
+        <circle cx="75" cy="24" r="3" fill="#9ca3af"/>
+        <circle cx="86" cy="50" r="4" fill="#ffffff"/>
+        <circle cx="75" cy="76" r="3.5" fill="#d1d5db"/>
+        <circle cx="50" cy="86" r="3" fill="#6b7280"/>
+        <circle cx="25" cy="76" r="2.5" fill="#4b5563"/>
+        <circle cx="14" cy="50" r="2" fill="#374151"/>
+        <circle cx="25" cy="24" r="2.5" fill="#6b7280"/>
+      </svg>
+
+      <div class="relative z-10 max-w-[1280px] mx-auto px-6 sm:px-10 pt-12 pb-16 lg:pt-20 lg:pb-24">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-6 items-center">
+          
+          <!-- LEFT COLUMN: HEADLINE, SUBTEXT & DUAL CTA BUTTONS -->
+          <div class="lg:col-span-6 space-y-6">
+            <!-- Small Floating Isometric Cube Accent -->
+            <div class="inline-block">
+              <svg class="w-8 h-8" viewBox="0 0 36 36" fill="none">
+                <polygon points="18,3 31,10.5 18,18 5,10.5" fill="#ffb08e"/>
+                <polygon points="5,10.5 18,18 18,33 5,25.5" fill="#f26b3a"/>
+                <polygon points="31,10.5 18,18 18,33 31,25.5" fill="#9a3412"/>
+              </svg>
+            </div>
+
+            <h1 class="text-4xl sm:text-5xl lg:text-[52px] font-bold tracking-tight text-white leading-[1.13]">
+              Circuit handover for<br>fiber networks
+            </h1>
+
+            <p class="text-sm sm:text-base text-[#9ca3af] leading-relaxed max-w-md">
+              Our commissioning platform works on all field devices, so you can validate optical levels once, capture client sign-offs, and generate ISO A4 acceptance certificates forever.
+            </p>
+
+            <!-- Dual Action Buttons -->
+            <div class="flex flex-wrap items-center gap-3.5 pt-2">
+              <button type="button" onclick="createNewWorkOrder(); switchScreen('studio');" class="bg-[#f26b3a] hover:bg-[#e05a2b] text-white text-xs font-bold uppercase tracking-wider px-7 py-3.5 rounded-none transition cursor-pointer shadow-lg shadow-[#f26b3a]/20">
+                Create Handover
+              </button>
+
+              <button type="button" onclick="switchScreen('vault')" class="bg-[#242629] hover:bg-[#2e3134] text-white text-xs font-bold uppercase tracking-wider px-7 py-3.5 rounded-none transition cursor-pointer">
+                Browse Records
+              </button>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: ABSTRACT 3D CHARCOAL & CORAL-ORANGE GEOMETRIC SCULPTURE -->
+          <div class="lg:col-span-6 flex items-center justify-center">
+            <svg class="w-full max-w-[540px] h-auto select-none" viewBox="0 0 560 460" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="accentPrismA" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ff8b60"/>
+                  <stop offset="50%" stop-color="#f26b3a"/>
+                  <stop offset="100%" stop-color="#9a3412"/>
+                </linearGradient>
+                <linearGradient id="accentPrismB" x1="100%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#ffb08e"/>
+                  <stop offset="100%" stop-color="#c2491d"/>
+                </linearGradient>
+                <linearGradient id="accentCubeTop" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ffd0bc"/>
+                  <stop offset="100%" stop-color="#ff8b60"/>
+                </linearGradient>
+                <linearGradient id="darkPlane" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#26282b"/>
+                  <stop offset="100%" stop-color="#18191b"/>
+                </linearGradient>
+                <filter id="geoShadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#080809" flood-opacity="0.7"/>
+                </filter>
+              </defs>
+
+              <!-- Thin Orbital Curves -->
+              <path d="M 190 10 C 205 145, 340 245, 535 235" stroke="#36393e" stroke-width="1.5" fill="none"/>
+              <circle cx="245" cy="275" r="76" stroke="#3e4146" stroke-width="1.4" fill="none"/>
+              <path d="M 172 252 A 76 76 0 0 0 278 344" stroke="#6b7280" stroke-width="1.5" fill="none"/>
+
+              <!-- Back-Right Coral-Orange Triangle Facets -->
+              <polygon points="390,45 555,155 415,245" fill="url(#accentPrismA)" opacity="0.92"/>
+              <polygon points="415,245 555,155 510,295" fill="url(#accentPrismB)" opacity="0.85"/>
+              <polygon points="365,245 485,260 405,365" fill="url(#accentPrismA)" opacity="0.95"/>
+
+              <!-- Large Tilted Dark Charcoal Square Plane (Centerpiece) -->
+              <g transform="translate(310, 210) rotate(-13)" filter="url(#geoShadow)">
+                <rect x="-118" y="-118" width="236" height="236" fill="url(#darkPlane)" stroke="#323539" stroke-width="1"/>
+              </g>
+
+              <!-- Overlapping Upper-Right Rotated Dark Square Plane -->
+              <g transform="translate(392, 118) rotate(32)" filter="url(#geoShadow)">
+                <rect x="-66" y="-66" width="132" height="132" fill="#212326" stroke="#35383d" stroke-width="1"/>
+              </g>
+
+              <!-- Mid-Left Small Floating Dark Square + Connector Line -->
+              <line x1="168" y1="194" x2="205" y2="202" stroke="#3e4146" stroke-width="1.2"/>
+              <g transform="translate(152, 190) rotate(-14)" filter="url(#geoShadow)">
+                <rect x="-18" y="-18" width="36" height="36" fill="#222427" stroke="#383b40" stroke-width="1"/>
+              </g>
+
+              <!-- Top Floating Warm Peach Diamond -->
+              <g transform="translate(268, 48) rotate(38)">
+                <rect x="-12" y="-12" width="24" height="24" fill="url(#accentCubeTop)"/>
+              </g>
+
+              <!-- Coral Diagonal Accent Bar -->
+              <polygon points="334,348 372,326 376,332 338,354" fill="#ff8b60"/>
+
+              <!-- Lower-Left Prominent 3D Coral-Orange Cube intersecting orbital circle -->
+              <g transform="translate(236, 268) rotate(-18)" filter="url(#geoShadow)">
+                <!-- Cube Top Face -->
+                <polygon points="0,-34 32,-16 0,2 -32,-16" fill="url(#accentCubeTop)"/>
+                <!-- Cube Left Face -->
+                <polygon points="-32,-16 0,2 0,38 -32,20" fill="#f26b3a"/>
+                <!-- Cube Right Face -->
+                <polygon points="32,-16 0,2 0,38 32,20" fill="#9a3412"/>
+              </g>
+            </svg>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 3-COLUMN FEATURE STRIP -->
+    <div class="max-w-[1140px] mx-auto px-6 sm:px-10 pt-8 pb-16">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-10 lg:gap-14 text-center">
+        
+        <!-- FEATURE 1: ISO A4 CERTIFICATES -->
+        <div class="flex flex-col items-center space-y-4">
+          <div class="w-24 h-24 flex items-center justify-center">
+            <svg class="w-24 h-24" viewBox="0 0 100 100" fill="none">
+              <rect x="24" y="34" width="12" height="18" fill="#10b981" opacity="0.85"/>
+              <polygon points="62,24 76,32 62,40" fill="#ff8b60"/>
+              <polygon points="32,68 48,74 34,82" fill="#f26b3a"/>
+              <ellipse cx="48" cy="40" rx="16" ry="8" fill="#36393e"/>
+              <path d="M32 40 V60 C32 64.4 39.2 68 48 68 C56.8 68 64 64.4 64 60 V40" fill="#222427"/>
+              <polygon points="48,26 66,35 48,44 30,35" fill="#f26b3a" opacity="0.92"/>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white tracking-tight">ISO A4 Certificates</h3>
+          <p class="text-xs sm:text-sm text-[#9ca3af] leading-relaxed max-w-xs">
+            Generate single-page DIA, GPON, LAN, rack audit, and fiber drop certificates with QR verification and client Conforme sign-off.
+          </p>
+        </div>
+
+        <!-- FEATURE 2: OPTICAL TELEMETRY -->
+        <div class="flex flex-col items-center space-y-4">
+          <div class="w-24 h-24 flex items-center justify-center">
+            <svg class="w-24 h-24" viewBox="0 0 100 100" fill="none">
+              <polygon points="46,18 54,24 44,27" fill="#ff8b60"/>
+              <polygon points="72,36 82,40 74,46" fill="#10b981"/>
+              <polygon points="22,50 30,44 32,54" fill="#f26b3a"/>
+              <polygon points="56,74 68,70 64,80" fill="#ff8b60"/>
+              <polygon points="50,30 70,42 50,54 30,42" fill="#3a3d42"/>
+              <polygon points="30,42 50,54 50,74 30,62" fill="#222427"/>
+              <polygon points="70,42 50,54 50,74 70,62" fill="#18191b"/>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white tracking-tight">Optical Telemetry</h3>
+          <p class="text-xs sm:text-sm text-[#9ca3af] leading-relaxed max-w-xs">
+            Validate GPON Class B+ RX/TX power levels in real time against ITU-T G.984 thresholds with instant pass and fail SLA guardrails.
+          </p>
+        </div>
+
+        <!-- FEATURE 3: FIELD CALCULATORS -->
+        <div class="flex flex-col items-center space-y-4">
+          <div class="w-24 h-24 flex items-center justify-center">
+            <svg class="w-24 h-24" viewBox="0 0 100 100" fill="none">
+              <polygon points="28,58 52,48 56,72 32,76" fill="#f26b3a"/>
+              <polygon points="64,22 72,26 66,32" fill="#ff8b60"/>
+              <polygon points="22,42 29,38 28,46" fill="#10b981"/>
+              <polygon points="68,66 78,62 74,72" fill="#ff8b60"/>
+              <polygon points="48,28 68,44 50,62 34,44" fill="#36393e"/>
+              <polygon points="50,62 68,44 64,66 48,74" fill="#1e2023"/>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white tracking-tight">Field Calculators</h3>
+          <p class="text-xs sm:text-sm text-[#9ca3af] leading-relaxed max-w-xs">
+            Compute IPv4 CIDR subnets, look up 144-core TIA-598-C fiber colors, and budget 1310/1490nm link attenuation directly on site.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- BELOW-THE-FOLD: 5 ISO A4 TEMPLATES & LIVE NOC ARCHIVE -->
+    <div class="max-w-[1280px] mx-auto px-6 sm:px-10 pt-10 border-t border-[#26282b] space-y-12">
+      
+      <!-- 5 A4 Document Templates Launcher -->
+      <div class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-[#ff8b60] block">Document Templates</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-white mt-0.5">Open an ISO A4 Commissioning Sheet</h2>
+          </div>
+          <span class="text-xs text-[#9ca3af]">Select any format below to launch directly in Handover Studio</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div onclick="launchTemplateFromHome('handover')" class="bg-[#191a1c] hover:bg-[#212326] border border-[#2d3034] hover:border-[#f26b3a] p-5 transition cursor-pointer flex flex-col justify-between group">
+            <div class="space-y-2.5">
+              <span class="text-[10px] font-mono font-bold text-[#ff8b60] bg-[#121314] border border-[#323539] px-2 py-0.5 inline-block">FORM-NOC-01</span>
+              <h3 class="text-sm font-bold text-white group-hover:text-[#ff8b60] transition">Circuit Handover</h3>
+              <p class="text-xs text-[#9ca3af] leading-relaxed">DIA &amp; GPON service acceptance with WAN IP, gateway, VLAN, ONT serial, and RX/TX power.</p>
+            </div>
+            <div class="pt-4 mt-4 border-t border-[#2a2c30] flex items-center justify-between text-xs font-semibold text-[#ff8b60]">
+              <span>Launch</span>
+              <i class="fa-solid fa-arrow-right text-[11px]"></i>
+            </div>
+          </div>
+
+          <div onclick="launchTemplateFromHome('lan')" class="bg-[#191a1c] hover:bg-[#212326] border border-[#2d3034] hover:border-[#f26b3a] p-5 transition cursor-pointer flex flex-col justify-between group">
+            <div class="space-y-2.5">
+              <span class="text-[10px] font-mono font-bold text-[#ff8b60] bg-[#121314] border border-[#323539] px-2 py-0.5 inline-block">FORM-LAN-02</span>
+              <h3 class="text-sm font-bold text-white group-hover:text-[#ff8b60] transition">LAN &amp; Switch</h3>
+              <p class="text-xs text-[#9ca3af] leading-relaxed">L2/L3 switch handover with management IPs, DHCP scopes, VLAN trunks, PoE+ budget, and Fluke tests.</p>
+            </div>
+            <div class="pt-4 mt-4 border-t border-[#2a2c30] flex items-center justify-between text-xs font-semibold text-[#ff8b60]">
+              <span>Launch</span>
+              <i class="fa-solid fa-arrow-right text-[11px]"></i>
+            </div>
+          </div>
+
+          <div onclick="launchTemplateFromHome('tags')" class="bg-[#191a1c] hover:bg-[#212326] border border-[#2d3034] hover:border-[#f26b3a] p-5 transition cursor-pointer flex flex-col justify-between group">
+            <div class="space-y-2.5">
+              <span class="text-[10px] font-mono font-bold text-[#ff8b60] bg-[#121314] border border-[#323539] px-2 py-0.5 inline-block">TAG-OSP-03</span>
+              <h3 class="text-sm font-bold text-white group-hover:text-[#ff8b60] transition">Fiber Drop Tag</h3>
+              <p class="text-xs text-[#9ca3af] leading-relaxed">Cut-out weatherproof cable identification tags with ODF port, NAP box, splitter, and TIA-598-C core.</p>
+            </div>
+            <div class="pt-4 mt-4 border-t border-[#2a2c30] flex items-center justify-between text-xs font-semibold text-[#ff8b60]">
+              <span>Launch</span>
+              <i class="fa-solid fa-arrow-right text-[11px]"></i>
+            </div>
+          </div>
+
+          <div onclick="launchTemplateFromHome('rack')" class="bg-[#191a1c] hover:bg-[#212326] border border-[#2d3034] hover:border-[#f26b3a] p-5 transition cursor-pointer flex flex-col justify-between group">
+            <div class="space-y-2.5">
+              <span class="text-[10px] font-mono font-bold text-[#ff8b60] bg-[#121314] border border-[#323539] px-2 py-0.5 inline-block">AUD-IDF-04</span>
+              <h3 class="text-sm font-bold text-white group-hover:text-[#ff8b60] transition">CPE / Rack Audit</h3>
+              <p class="text-xs text-[#9ca3af] leading-relaxed">IDF/MDF facility audit covering edge routers, UPS battery runtime, ambient thermal, and grounding.</p>
+            </div>
+            <div class="pt-4 mt-4 border-t border-[#2a2c30] flex items-center justify-between text-xs font-semibold text-[#ff8b60]">
+              <span>Launch</span>
+              <i class="fa-solid fa-arrow-right text-[11px]"></i>
+            </div>
+          </div>
+
+          <div onclick="launchTemplateFromHome('diag')" class="bg-[#191a1c] hover:bg-[#212326] border border-[#2d3034] hover:border-[#f26b3a] p-5 transition cursor-pointer flex flex-col justify-between group">
+            <div class="space-y-2.5">
+              <span class="text-[10px] font-mono font-bold text-[#ff8b60] bg-[#121314] border border-[#323539] px-2 py-0.5 inline-block">DIA-RF-05</span>
+              <h3 class="text-sm font-bold text-white group-hover:text-[#ff8b60] transition">Wi-Fi &amp; Ping Triage</h3>
+              <p class="text-xs text-[#9ca3af] leading-relaxed">Wireless RF survey &amp; ICMP latency diagnostics including SSIDs, RSSI/SNR, gateway RTT, and speed tests.</p>
+            </div>
+            <div class="pt-4 mt-4 border-t border-[#2a2c30] flex items-center justify-between text-xs font-semibold text-[#ff8b60]">
+              <span>Launch</span>
+              <i class="fa-solid fa-arrow-right text-[11px]"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Circuit Handover Records + Live Summary -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div class="lg:col-span-8 bg-[#191a1c] border border-[#2d3034] p-6 space-y-4">
+          <div class="flex items-center justify-between border-b border-[#2a2c30] pb-3.5">
+            <div>
+              <h2 class="text-base sm:text-lg font-bold text-white">Recent Circuit Handover Records</h2>
+              <p class="text-xs text-[#9ca3af]">Latest commissioned sites stored in the archive</p>
+            </div>
+            <button type="button" onclick="switchScreen('vault')" class="bg-[#242629] hover:bg-[#2e3134] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 cursor-pointer transition">
+              View All (<span id="home-kpi-total">0</span>)
+            </button>
+          </div>
+
+          <div class="overflow-x-auto border border-[#2d3034]">
+            <table class="w-full text-left text-xs text-white border-collapse">
+              <thead>
+                <tr class="bg-[#121314] border-b border-[#2d3034] text-slate-300 uppercase text-[11px]">
+                  <th class="py-3 px-3.5 font-bold">Work Order</th>
+                  <th class="py-3 px-3.5 font-bold">Client &amp; Site</th>
+                  <th class="py-3 px-3.5 font-bold">Status</th>
+                  <th class="py-3 px-3.5 font-bold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="home-recent-tbody" class="divide-y divide-[#2a2c30] bg-[#191a1c]"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="lg:col-span-4 bg-[#191a1c] border border-[#2d3034] p-6 space-y-4">
+          <div class="border-b border-[#2a2c30] pb-3.5">
+            <h2 class="text-base sm:text-lg font-bold text-white">NOC Deployment Snapshot</h2>
+            <p class="text-xs text-[#9ca3af]">Live telemetry aggregated across active records</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-[#121314] border border-[#2d3034] p-3.5">
+              <span class="text-[11px] text-[#9ca3af] block">Client Conforme</span>
+              <strong id="home-kpi-signed" class="text-xl font-bold text-emerald-400 mt-1 block">0%</strong>
+            </div>
+            <div class="bg-[#121314] border border-[#2d3034] p-3.5">
+              <span class="text-[11px] text-[#9ca3af] block">Mean Optical RX</span>
+              <strong id="home-kpi-rx" class="text-xl font-bold text-[#ff8b60] mt-1 block">-18.4 dBm</strong>
+            </div>
+          </div>
+
+          <div class="bg-[#121314] border border-[#2d3034] p-3.5 flex items-center justify-between text-xs">
+            <span class="text-[#9ca3af]">Class B+ Optical Pass Rate</span>
+            <strong id="home-kpi-passrate" class="text-white font-bold">100%</strong>
+          </div>
+
+          <button type="button" onclick="switchScreen('analytics')" class="w-full bg-[#f26b3a] hover:bg-[#e05a2b] text-white text-xs font-bold uppercase tracking-wider py-3 px-4 transition cursor-pointer">
+            Open Full Telemetry Analytics
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================================================================
+       SCREEN 1: HANDOVER STUDIO
+       ====================================================================== -->
+  <section id="screen-studio" class="hidden w-full max-w-[1440px] mx-auto px-4 sm:px-8 pt-6 pb-20 flex flex-col md:flex-row gap-6 items-start">
+    
+    <!-- LEFT PANEL: HEIGHT-MATCHED TO A4 OUTPUT SHEET -->
+    <aside id="studio-sidebar" class="no-print w-full md:w-[440px] lg:w-[495px] xl:w-[520px] bg-[#191a1c] border border-[#2d3034] rounded-none shadow-lg flex flex-col flex-shrink-0 overflow-hidden">
+      
+      <!-- Studio Header & Saved Loader -->
+      <div class="p-4 sm:px-5 sm:py-3.5 border-b border-[#2a2c30] flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <h1 class="text-xl font-bold tracking-tight text-white">Circuit Handover</h1>
+          <span class="text-[11px] font-mono font-medium text-[#ff8b60] bg-[#f26b3a]/15 border border-[#f26b3a]/40 px-2.5 py-0.5 rounded-none">ISO A4</span>
+        </div>
+        <p class="text-xs text-slate-300 mt-0.5">
+          Configure optical parameters, validate subnet allocations, and generate A4 service acceptance certificates.
+        </p>
+
+        <div class="mt-2.5">
+          <select id="saved-wo-select" onchange="loadWorkOrderFromDB(this.value)" class="form-input text-xs w-full cursor-pointer font-medium">
+            <option value="">-- Load Saved Circuit Record --</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Document Format Selector -->
+      <div class="px-4 sm:px-5 py-2.5 border-b border-[#2a2c30] bg-[#151618] flex-shrink-0 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Document Format</span>
+          <span class="text-[10px] font-mono text-slate-400">ISO A4</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          <button type="button" onclick="selectTemplate('handover')" id="tab-handover" class="tmpl-pill active-pill px-2.5 py-1.5 rounded-none text-xs font-semibold text-left transition cursor-pointer flex items-center gap-1.5">
+            <i class="fa-solid fa-file-signature"></i> <span>Circuit Handover</span>
+          </button>
+          <button type="button" onclick="selectTemplate('lan')" id="tab-lan" class="tmpl-pill px-2.5 py-1.5 rounded-none text-xs font-semibold text-left transition cursor-pointer flex items-center gap-1.5">
+            <i class="fa-solid fa-sitemap"></i> <span>LAN & Switch</span>
+          </button>
+          <button type="button" onclick="selectTemplate('tags')" id="tab-tags" class="tmpl-pill px-2.5 py-1.5 rounded-none text-xs font-semibold text-left transition cursor-pointer flex items-center gap-1.5">
+            <i class="fa-solid fa-tags"></i> <span>Fiber Drop Tag</span>
+          </button>
+          <button type="button" onclick="selectTemplate('rack')" id="tab-rack" class="tmpl-pill px-2.5 py-1.5 rounded-none text-xs font-semibold text-left transition cursor-pointer flex items-center gap-1.5">
+            <i class="fa-solid fa-server"></i> <span>CPE / Rack Audit</span>
+          </button>
+          <button type="button" onclick="selectTemplate('diag')" id="tab-diag" class="tmpl-pill px-2.5 py-1.5 rounded-none text-xs font-semibold text-left transition cursor-pointer flex items-center gap-1.5 sm:col-span-2">
+            <i class="fa-solid fa-wifi"></i> <span>Wi-Fi & Ping Triage</span>
+          </button>
+        </div>
+
+        <!-- Quick Section Jump Bar -->
+        <div id="form-jump-bar" class="pt-2 border-t border-dashed border-[#323539] flex items-center gap-1.5 overflow-x-auto text-[11px]">
+          <span class="text-slate-400 font-medium mr-0.5">Jump:</span>
+          <button type="button" id="jump-btn-sec-provider" onclick="jumpToFormSection('sec-provider')" class="jump-pill bg-[#f26b3a] text-white border border-[#f26b3a] font-semibold px-2.5 py-0.5 rounded-none cursor-pointer whitespace-nowrap transition">Provider</button>
+          <button type="button" id="jump-btn-sec-client" onclick="jumpToFormSection('sec-client')" class="jump-pill bg-[#242629] hover:bg-[#2e3134] border border-[#3e4146] text-slate-200 font-medium px-2.5 py-0.5 rounded-none cursor-pointer whitespace-nowrap transition">Client</button>
+          <button type="button" id="jump-btn-sec-specs" onclick="jumpToFormSection('sec-specs')" class="jump-pill bg-[#242629] hover:bg-[#2e3134] border border-[#3e4146] text-slate-200 font-medium px-2.5 py-0.5 rounded-none cursor-pointer whitespace-nowrap transition">WAN & Optical</button>
+          <button type="button" id="jump-btn-sec-signature" onclick="jumpToFormSection('sec-signature')" class="jump-pill bg-[#242629] hover:bg-[#2e3134] border border-[#3e4146] text-slate-200 font-medium px-2.5 py-0.5 rounded-none cursor-pointer whitespace-nowrap transition">Signature</button>
+        </div>
+      </div>
+
+      <!-- Scrollable Form Sections -->
+      <form id="doc-form" onsubmit="event.preventDefault();" class="relative px-4 sm:px-5 pt-4 pb-28 space-y-4 text-sm overflow-y-auto flex-1 custom-scrollbar">
+        
+        <!-- SECTION: PROVIDER IDENTITY -->
+        <div id="sec-provider" class="space-y-2.5 pb-4 border-b-2 border-dashed border-[#323539] transition-all">
+          <div class="flex items-center justify-between bg-[#121314] border border-[#2a2c30] rounded-none px-3 py-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-none bg-[#f26b3a]"></span>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-200">Provider Identity</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div id="company-logo-preview" class="w-6 h-6 rounded-none border border-[#323539] bg-[#f26b3a] flex items-center justify-center overflow-hidden text-white">
+                <i class="fa-solid fa-network-wired text-xs"></i>
+              </div>
+              <input type="file" id="company-logo-file" accept="image/*" onchange="handleLogoUpload(event)" class="hidden">
+              <button type="button" onclick="document.getElementById('company-logo-file').click()" class="bg-[#242629] hover:bg-[#2e3134] border border-[#3e4146] text-slate-200 text-[11px] px-2.5 py-1 rounded-none font-medium cursor-pointer transition">
+                <i class="fa-solid fa-upload mr-1 text-[#ff8b60]"></i> Upload Logo
+              </button>
+              <button type="button" onclick="removeLogo()" id="btn-remove-logo" class="hidden bg-rose-950/60 hover:bg-rose-900/70 border border-rose-800 text-rose-300 text-[11px] px-2 py-1 rounded-none font-medium cursor-pointer">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-medium text-slate-200 mb-1">Provider / ISP Name</label>
+              <input type="text" id="common-company-name" oninput="handleCommonInput('companyName', this.value)" class="form-input w-full font-semibold">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-200 mb-1">Division / Subtitle</label>
+              <input type="text" id="common-company-subtitle" oninput="handleCommonInput('companySubtitle', this.value)" class="form-input w-full">
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION: CLIENT & CIRCUIT DETAILS -->
+        <div id="sec-client" class="space-y-2.5 pb-4 border-b-2 border-dashed border-[#323539] transition-all">
+          <div class="flex items-center justify-between bg-[#121314] border border-[#2a2c30] rounded-none px-3 py-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-none bg-[#f26b3a]"></span>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-200">Client & Circuit Reference</span>
+            </div>
+            <span class="text-[10px] font-mono text-slate-400">WORK ORDER</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-medium text-slate-200 mb-1">Circuit / Work Order #</label>
+              <input type="text" id="common-wo-number" oninput="handleCommonInput('woNumber', this.value)" class="form-input w-full font-mono font-semibold">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-200 mb-1">Handover Date</label>
+              <input type="text" id="common-form-date" oninput="handleCommonInput('formDate', this.value)" class="form-input w-full font-mono font-semibold">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-medium text-slate-200 mb-1">Client / Subscriber Organization</label>
+              <input type="text" id="common-client-name" oninput="handleCommonInput('clientName', this.value)" class="form-input w-full font-semibold">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-200 mb-1">Lead Engineer / Technician</label>
+              <input type="text" id="common-tech-name" oninput="handleCommonInput('techName', this.value)" class="form-input w-full">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-200 mb-1">Site Installation Address</label>
+            <input type="text" id="common-site-address" oninput="handleCommonInput('siteAddress', this.value)" class="form-input w-full">
+          </div>
+        </div>
+
+        <!-- SECTION: DYNAMIC TECHNICAL SPECIFICATIONS -->
+        <div id="sec-specs" class="space-y-2.5 pb-4 border-b-2 border-dashed border-[#323539] transition-all">
+          <div class="flex items-center justify-between bg-[#121314] border border-[#f26b3a]/50 rounded-none px-3 py-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-none bg-[#f26b3a]"></span>
+              <span id="sec-specs-title" class="text-[11px] font-bold uppercase tracking-wider text-white">WAN & Optical Telemetry</span>
+            </div>
+            <span id="sec-specs-badge" class="text-[10px] font-mono font-semibold text-[#ff8b60] bg-[#f26b3a]/15 border border-[#f26b3a]/40 px-2 py-0.5 rounded-none">DIA / GPON</span>
+          </div>
+          <div id="dynamic-template-fields-container" class="space-y-2.5"></div>
+        </div>
+
+        <!-- SECTION: CLIENT SIGNATURE -->
+        <div id="sec-signature" class="space-y-2.5 pb-2 transition-all">
+          <div class="flex items-center justify-between bg-[#121314] border border-[#2a2c30] rounded-none px-3 py-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-none bg-[#f26b3a]"></span>
+              <span id="sec-signature-title" class="text-[11px] font-bold uppercase tracking-wider text-slate-200">Client Acceptance Signature</span>
+            </div>
+            <button type="button" onclick="clearSignature()" class="text-xs text-[#ff8b60] hover:underline font-semibold cursor-pointer">Clear Pad</button>
+          </div>
+          <div class="border border-[#323539] bg-white rounded-none overflow-hidden">
+            <canvas id="sig-pad" width="600" height="140" class="w-full h-24 cursor-crosshair bg-white touch-none"></canvas>
+          </div>
+        </div>
+
+      </form>
+
+      <!-- BOTTOM ACTION BAR -->
+      <div class="px-4 sm:px-5 py-3 border-t border-[#2a2c30] bg-[#151618] space-y-2 flex-shrink-0">
+        <div class="flex items-center justify-between font-mono text-xs bg-[#121314] border border-[#2a2c30] px-3.5 py-1.5 rounded-none">
+          <span class="text-slate-300 font-medium">Optical Margin Status:</span>
+          <span id="sidebar-validation-status" class="text-emerald-400 font-bold">PASS (OPTIMAL)</span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="saveCurrentWorkOrder()" class="flex-1 bg-[#242629] hover:bg-[#2e3134] border border-[#3e4146] text-white font-semibold text-xs py-2.5 px-4 rounded-none transition cursor-pointer flex items-center justify-center gap-2 shadow-sm">
+            <i class="fa-solid fa-floppy-disk text-[#f26b3a]"></i>
+            <span>Save Record</span>
+          </button>
+
+          <button type="button" onclick="window.print()" class="bg-[#242629] hover:bg-[#2e3134] border border-[#3e4146] text-slate-100 font-semibold text-xs px-3.5 py-2.5 rounded-none transition cursor-pointer flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Print A4
+          </button>
+
+          <button type="button" onclick="exportToPDF()" class="bg-[#242629] hover:bg-[#2e3134] border border-[#3e4146] text-slate-100 font-semibold text-xs px-3.5 py-2.5 rounded-none transition cursor-pointer flex items-center gap-1.5">
+            <i class="fa-solid fa-file-pdf text-[#f26b3a]"></i> PDF
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT WORKSPACE: A4 PRINTABLE PREVIEW -->
+    <main id="studio-preview-main" class="flex-1 min-w-0 flex flex-col items-center w-full bg-[#323a36] border border-[#3f4843] rounded-none p-4 sm:p-6">
+      
+      <!-- Top Toolbar -->
+      <div class="no-print w-full max-w-[210mm] flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-[#444e49]">
+        <div class="inline-flex items-center gap-2 bg-[#1c1e1f] border border-[#2d3034] px-3.5 py-1.5 rounded-none text-xs text-slate-200">
+          <span class="w-2 h-2 rounded-none bg-[#f26b3a]"></span>
+          <span class="font-medium">A4 Print Sheet Preview (210mm &times; 297mm)</span>
+        </div>
+
+        <button type="button" onclick="toggleClientSignOffLock()" id="btn-client-lock" class="inline-flex items-center gap-2 bg-[#1c1e1f] hover:bg-[#25282a] border border-[#2d3034] text-slate-200 px-4 py-1.5 rounded-none font-medium transition cursor-pointer text-xs">
+          <i class="fa-solid fa-lock-open text-[#f26b3a]" id="client-lock-icon"></i>
+          <span id="client-lock-label">Lock Form for Client Sign-Off</span>
+        </button>
+      </div>
+
+      <!-- Crisp White A4 Printable Document -->
+      <div id="printable-canvas" class="w-full bg-white text-slate-900 rounded-none shadow-2xl border border-slate-300 overflow-hidden"></div>
+    </main>
+
+  </section>
+
+  <!-- ======================================================================
+       SCREEN 2: SAVED RECORDS VAULT
+       ====================================================================== -->
+  <section id="screen-vault" class="hidden w-full bg-[#121314] text-slate-100 px-4 sm:px-8 pt-6 pb-24">
+    <div class="max-w-[1440px] mx-auto space-y-6">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Saved Circuit Records</h2>
+          <p class="text-xs text-slate-300 mt-1">Stored on the Express.js backend (<code class="text-[#ff8b60] font-semibold">data/records.json</code>) with automatic browser backup.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button onclick="seedSampleRecords(true)" class="bg-[#191a1c] hover:bg-[#242629] border border-[#3e4146] text-white text-xs font-semibold px-4 py-2 rounded-none transition inline-flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-database text-[#ff8b60]"></i> Load 35 Sample Records
+          </button>
+          <button onclick="exportDBToJSON()" class="bg-[#191a1c] hover:bg-[#242629] border border-[#3e4146] text-white text-xs font-semibold px-4 py-2 rounded-none transition inline-flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-download text-slate-300"></i> Export JSON
+          </button>
+          <label class="bg-[#191a1c] hover:bg-[#242629] border border-[#3e4146] text-white text-xs font-semibold px-4 py-2 rounded-none transition inline-flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-upload text-[#ff8b60]"></i> Import JSON
+            <input type="file" accept=".json" onchange="importDBFromJSON(event)" class="hidden">
+          </label>
+          <button onclick="clearAllWorkOrders()" class="bg-[#191a1c] hover:bg-rose-950/70 border border-[#3e4146] text-rose-300 text-xs font-semibold px-4 py-2 rounded-none transition inline-flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-trash-can"></i> Clear All
+          </button>
+        </div>
+      </div>
+
+      <!-- High-Contrast Vault Summary Bar -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-[#191a1c] border border-[#2d3034] p-4 flex items-center justify-between">
+          <div>
+            <span class="text-[11px] uppercase tracking-wider text-slate-300 font-semibold block">Total Archived Records</span>
+            <span id="vault-stat-total" class="text-2xl font-bold text-white mt-0.5 block">0</span>
+          </div>
+          <span class="bg-[#121314] border border-[#3e4146] text-[#ff8b60] px-2.5 py-1 text-xs font-bold">ALL</span>
+        </div>
+        <div class="bg-[#191a1c] border border-[#2d3034] p-4 flex items-center justify-between">
+          <div>
+            <span class="text-[11px] uppercase tracking-wider text-slate-300 font-semibold block">Client Signed (Conforme)</span>
+            <span id="vault-stat-signed" class="text-2xl font-bold text-emerald-300 mt-0.5 block">0</span>
+          </div>
+          <span class="bg-emerald-950 border border-emerald-600/60 text-emerald-300 px-2.5 py-1 text-xs font-bold">VERIFIED</span>
+        </div>
+        <div class="bg-[#191a1c] border border-[#2d3034] p-4 flex items-center justify-between">
+          <div>
+            <span class="text-[11px] uppercase tracking-wider text-slate-300 font-semibold block">Awaiting Client Sign-Off</span>
+            <span id="vault-stat-pending" class="text-2xl font-bold text-amber-300 mt-0.5 block">0</span>
+          </div>
+          <span class="bg-amber-950 border border-amber-600/60 text-amber-300 px-2.5 py-1 text-xs font-bold">PENDING</span>
+        </div>
+      </div>
+
+      <div class="bg-[#191a1c] border border-[#2d3034] rounded-none p-6 shadow-lg space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-[#2d3034]">
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-bold text-white">Commissioned & Audited Circuits (<span id="vault-total-count">0</span>)</span>
+            <span id="vault-filtered-label" class="text-xs font-mono text-slate-200 bg-[#121314] border border-[#3e4146] px-2.5 py-0.5 rounded-none">Showing all records</span>
+          </div>
+
+          <!-- Filter & Search Controls -->
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="text" id="vault-search-input" oninput="renderVaultTable()" placeholder="Search WO #, client, engineer, or site..." class="form-input text-xs w-64">
+            <select id="vault-type-filter" onchange="renderVaultTable()" class="form-input text-xs cursor-pointer">
+              <option value="all">All Document Types</option>
+              <option value="handover">Circuit Handover</option>
+              <option value="lan">LAN & Switch</option>
+              <option value="tags">Fiber Drop Tag</option>
+              <option value="rack">CPE / Rack Audit</option>
+              <option value="diag">Wi-Fi & Ping Triage</option>
+            </select>
+            <select id="vault-status-filter" onchange="renderVaultTable()" class="form-input text-xs cursor-pointer">
+              <option value="all">All Statuses</option>
+              <option value="signed">Signed (Conforme)</option>
+              <option value="pending">Pending Sign-Off</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto border border-[#323539]">
+          <table class="w-full text-left font-mono text-xs sm:text-sm text-white border-collapse">
+            <thead>
+              <tr class="bg-[#0f1011] border-b-2 border-[#323539] text-slate-200 text-[11px] uppercase tracking-wider">
+                <th class="py-3.5 px-4 font-bold">Ref / Circuit #</th>
+                <th class="py-3.5 px-4 font-bold">Client Organization & Site</th>
+                <th class="py-3.5 px-4 font-bold">Field Engineer</th>
+                <th class="py-3.5 px-4 font-bold">Document Type</th>
+                <th class="py-3.5 px-4 font-bold">Acceptance Status</th>
+                <th class="py-3.5 px-4 font-bold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="db-table-body" class="divide-y divide-[#2a2c30] bg-[#191a1c] text-white"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================================================================
+       SCREEN 3: ANALYTICS & VISUALIZATIONS
+       ====================================================================== -->
+  <section id="screen-analytics" class="hidden w-full bg-[#121314] text-slate-100 px-4 sm:px-8 pt-6 pb-24">
+    <div class="max-w-[1440px] mx-auto space-y-6">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Network Audit Analytics</h2>
+          <p class="text-xs text-slate-300 mt-1">Live summary of commissioned circuits, client acceptance progress, and GPON optical signal health.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button onclick="renderAnalyticsScreen()" class="bg-[#191a1c] hover:bg-[#242629] border border-[#3e4146] text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-none transition inline-flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-rotate text-slate-400"></i> Refresh Data
+          </button>
+          <button onclick="exportSummaryCSV()" class="bg-[#f26b3a] hover:bg-[#e05a2b] text-white text-xs font-semibold px-4 py-2.5 rounded-none transition inline-flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-file-csv"></i> Export CSV Report
+          </button>
+        </div>
+      </div>
+
+      <!-- 3-COLUMN GRID -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        
+        <!-- COLUMN 1 (4 cols): Audit Summary & Telemetry Card -->
+        <div class="lg:col-span-4 bg-[#191a1c] border border-[#2d3034] rounded-none p-5 shadow-lg flex flex-col justify-between space-y-5">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-base font-bold text-white">Audit Summary</h3>
+              <button onclick="switchScreen('studio')" class="bg-[#242629] hover:bg-[#2e3134] text-slate-200 text-xs font-semibold px-3 py-1 rounded-none transition cursor-pointer">+ Add record</button>
+            </div>
+
+            <!-- Optical Telemetry Card -->
+            <div class="rounded-none overflow-hidden border border-[#323539] flex h-36">
+              <div class="w-16 bg-[#f26b3a] p-3.5 flex flex-col justify-between text-white">
+                <div class="flex items-center gap-1">
+                  <span class="w-3 h-3 rounded-none bg-white"></span>
+                  <span class="w-3 h-3 rounded-none bg-white/40 -ml-1"></span>
+                </div>
+                <span class="font-mono text-[10px] tracking-wider font-bold">GPON</span>
+              </div>
+              <div class="flex-1 bg-[#0f1011] p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold tracking-wider uppercase text-slate-300">MEAN OPTICAL RX</span>
+                  <i class="fa-solid fa-wave-square text-[#ff8b60] text-sm"></i>
+                </div>
+                <div>
+                  <span id="kpi-rx" class="text-2xl font-bold text-white font-mono">-18.4 dBm</span>
+                  <span class="text-[11px] text-slate-300 block">Standard Range: -8.0 to -25.0 dBm</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px] font-mono">
+                  <span class="text-slate-400">ITU-T G.984</span>
+                  <span id="kpi-rx-badge" class="text-emerald-400 font-bold">WITHIN SPEC</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Total Logged Audits Row -->
+            <div class="flex items-center justify-between py-4 mt-3 border-b border-[#2a2c30]">
+              <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
+                <i class="fa-regular fa-folder-open text-slate-400"></i>
+                <span>Total Logged Audits</span>
+              </div>
+              <span id="kpi-total" class="text-lg font-bold text-white font-mono">0</span>
+            </div>
+
+            <!-- Status & Category Breakdown -->
+            <div class="pt-3 space-y-2.5 text-xs">
+              <div class="flex items-center justify-between font-medium text-slate-200">
+                <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-none bg-emerald-400"></span> Signed by Client (Conforme)</span>
+                <span id="kpi-signed" class="font-mono font-bold text-emerald-400">0</span>
+              </div>
+              <div class="flex items-center justify-between font-medium text-slate-200">
+                <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-none bg-[#ff8b60]"></span> Awaiting Client Signature</span>
+                <span id="kpi-pending" class="font-mono font-bold text-[#ff8b60]">0</span>
+              </div>
+
+              <div class="pt-2 mt-2 border-t border-dashed border-[#323539] space-y-2 text-slate-300">
+                <div class="flex justify-between">
+                  <span>Circuit Handover Certificates</span>
+                  <span id="kpi-handover-count" class="font-mono font-semibold text-white">0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>LAN & Switch Handovers</span>
+                  <span id="kpi-lan-count" class="font-mono font-semibold text-white">0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Fiber Tags, Rack & Wi-Fi Audits</span>
+                  <span id="kpi-other-count" class="font-mono font-semibold text-white">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMN 2 (4 cols): Client Sign-Off Progress + RX Signal Line Chart -->
+        <div class="lg:col-span-4 flex flex-col gap-5">
+          
+          <div class="bg-[#191a1c] border border-[#2d3034] rounded-none p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-bold text-white">Client Sign-Off Rate</h3>
+              <button onclick="switchScreen('vault')" class="bg-[#242629] hover:bg-[#2e3134] text-slate-200 text-xs font-semibold px-3 py-1 rounded-none transition cursor-pointer">View records &rsaquo;</button>
+            </div>
+
+            <div class="flex items-baseline gap-3">
+              <span id="kpi-signoff-rate" class="text-3xl font-bold text-white font-mono">0%</span>
+              <span id="kpi-signoff-sub" class="text-xs text-slate-300 leading-tight">0 of 0 records signed<br>with client Conforme</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 pt-1 font-mono text-xs bg-[#0f1011] p-3 rounded-none border border-[#2a2c30]">
+              <div>
+                <span class="text-slate-400 block text-[10px]">Signed</span>
+                <strong id="kpi-signed-mini" class="text-white">0 docs</strong>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px]">Pending</span>
+                <strong id="kpi-pending-mini" class="text-white">0 docs</strong>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px]">Optical Pass</span>
+                <strong id="kpi-optical-pass" class="text-emerald-400">100%</strong>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center gap-2 h-11">
+                <div id="bar-signed-seg" class="bg-emerald-600 rounded-none h-11 flex items-center justify-center text-white font-mono text-[11px] font-bold transition-all" style="width: 67%;">
+                  <span id="bar-signed-label">Signed</span>
+                </div>
+                <div id="bar-pending-seg" class="bg-[#f26b3a] rounded-none h-10 flex items-center justify-center text-white font-mono text-[11px] font-bold transition-all" style="width: 33%;">
+                  <span id="bar-pending-label">Pending</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[#191a1c] border border-[#2d3034] rounded-none p-5 shadow-lg flex-1 flex flex-col justify-between space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-sm font-bold text-white block">Optical RX Power per Circuit</span>
+                <span class="text-[11px] text-slate-300">Higher (closer to -15 dBm) indicates stronger fiber signal</span>
+              </div>
+              <span class="bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 text-[11px] font-bold px-2.5 py-0.5 rounded-none font-mono">
+                PASS
+              </span>
+            </div>
+
+            <div class="h-44 w-full pt-1">
+              <canvas id="chart-rx-trend"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- COLUMN 3 (4 cols): Template Gauge + Optical Headroom Card -->
+        <div class="lg:col-span-4 flex flex-col gap-5">
+          
+          <div class="bg-[#191a1c] border border-[#2d3034] rounded-none p-5 shadow-lg flex flex-col items-center justify-between">
+            <div class="w-full flex items-center justify-between mb-1">
+              <span class="text-sm font-bold text-white">Documents by Category</span>
+              <span class="text-xs text-slate-400 font-mono">A4 TEMPLATES</span>
+            </div>
+
+            <div class="relative w-full h-40 flex items-center justify-center">
+              <canvas id="chart-template-dist"></canvas>
+              <div class="absolute bottom-2 text-center pointer-events-none">
+                <span id="gauge-center-val" class="text-2xl font-bold text-white font-mono block">0</span>
+                <span class="text-[11px] text-slate-300">Total Records</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-[11px] text-slate-200 pt-3 border-t border-dashed border-[#323539] w-full text-center">
+              <div class="flex flex-col items-center">
+                <span class="inline-flex items-center gap-1 font-medium"><span class="w-2.5 h-2.5 rounded-none bg-[#f26b3a]"></span> Handover</span>
+                <strong id="legend-handover-val" class="font-mono text-white mt-0.5">0</strong>
+              </div>
+              <div class="flex flex-col items-center">
+                <span class="inline-flex items-center gap-1 font-medium"><span class="w-2.5 h-2.5 rounded-none bg-[#10b981]"></span> LAN & Rack</span>
+                <strong id="legend-infra-val" class="font-mono text-white mt-0.5">0</strong>
+              </div>
+              <div class="flex flex-col items-center">
+                <span class="inline-flex items-center gap-1 font-medium"><span class="w-2.5 h-2.5 rounded-none bg-[#ff8b60]"></span> Tags & Wi-Fi</span>
+                <strong id="legend-field-val" class="font-mono text-white mt-0.5">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[#191a1c] border border-[#f26b3a]/50 rounded-none p-5 text-white shadow-lg flex-1 flex flex-col justify-between space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <span class="text-sm font-bold text-white block">Optical Signal Safety Margin</span>
+                <span class="text-[11px] text-slate-300">Buffer above -28.0 dBm GPON receiver cutoff</span>
+              </div>
+              <span class="text-[10px] font-mono bg-[#f26b3a]/15 text-[#ff8b60] border border-[#f26b3a]/40 px-2.5 py-1 rounded-none font-semibold">CLASS B+</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <span id="kpi-headroom-val" class="text-3xl font-bold text-white font-mono">+9.6 dB</span>
+              <span class="bg-[#f26b3a] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-none font-mono">
+                SAFE HEADROOM
+              </span>
+            </div>
+
+            <div class="h-28 w-full">
+              <canvas id="chart-sla-spark"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================================
+       SCREEN 4: NETWORK FIELD CALCULATORS
+       ====================================================================== -->
+  <section id="screen-tools" class="hidden w-full bg-[#121314] text-slate-100 px-4 sm:px-8 pt-6 pb-24">
+    <div class="max-w-[1440px] mx-auto space-y-6">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Network Field Calculators</h2>
+          <p class="text-xs text-slate-300 mt-1">Instant IPv4 CIDR subnetting, TIA-598-C fiber core color lookup, and GPON optical attenuation budgeting.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="applySubnetPreset('120.28.142.18', 30)" class="bg-[#191a1c] hover:bg-[#242629] border border-[#3e4146] text-slate-200 text-xs font-semibold px-3.5 py-1.5 rounded-none transition cursor-pointer">
+            Preset: /30 WAN Link
+          </button>
+          <button type="button" onclick="applySubnetPreset('120.28.142.34', 29)" class="bg-[#191a1c] hover:bg-[#242629] border border-[#3e4146] text-slate-200 text-xs font-semibold px-3.5 py-1.5 rounded-none transition cursor-pointer">
+            Preset: /29 Public Block
+          </button>
+          <button type="button" onclick="applySubnetPreset('192.168.10.1', 24)" class="bg-[#191a1c] hover:bg-[#242629] border border-[#3e4146] text-slate-200 text-xs font-semibold px-3.5 py-1.5 rounded-none transition cursor-pointer">
+            Preset: /24 Office LAN
+          </button>
+        </div>
+      </div>
+
+      <!-- 3-COLUMN CALCULATOR GRID -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        
+        <!-- CARD 1: IPv4 CIDR SUBNET CALCULATOR (5 cols) -->
+        <div class="lg:col-span-5 bg-[#191a1c] border border-[#2d3034] rounded-none p-6 shadow-lg flex flex-col justify-between space-y-5">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between border-b border-dashed border-[#323539] pb-3">
+              <div>
+                <h3 class="text-base font-bold text-white">IPv4 CIDR Subnet Calculator</h3>
+                <p class="text-[11px] text-slate-300">Computes gateway, broadcast, and usable host IP range</p>
+              </div>
+              <span class="text-xs font-mono text-[#ff8b60] bg-[#f26b3a]/15 border border-[#f26b3a]/40 px-2.5 py-0.5 rounded-none font-semibold">Layer 3</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+              <div class="col-span-2">
+                <label class="block text-slate-200 text-xs font-medium mb-1">Host / WAN IPv4 Address</label>
+                <input type="text" id="calc-ip" value="120.28.142.18" oninput="runSubnetCalc()" class="form-input w-full font-mono font-semibold">
+              </div>
+              <div>
+                <label class="block text-slate-200 text-xs font-medium mb-1">CIDR Prefix</label>
+                <select id="calc-cidr" onchange="runSubnetCalc()" class="form-input w-full font-mono font-semibold"></select>
+              </div>
+            </div>
+
+            <div class="bg-[#0f1011] p-4 rounded-none border border-[#2a2c30] font-mono text-xs space-y-2.5">
+              <div class="flex justify-between"><span class="text-slate-300">Subnet Mask</span> <strong id="res-mask" class="text-white">255.255.255.252</strong></div>
+              <div class="flex justify-between"><span class="text-slate-300">Network ID</span> <strong id="res-netid" class="text-[#ff8b60]">120.28.142.16</strong></div>
+              <div class="flex justify-between"><span class="text-slate-300">Broadcast Address</span> <strong id="res-bcast" class="text-slate-100">120.28.142.19</strong></div>
+              <div class="flex justify-between"><span class="text-slate-300">Usable Host Range</span> <strong id="res-range" class="text-emerald-400">120.28.142.17 - 120.28.142.18</strong></div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-dashed border-[#323539] flex items-center justify-between">
+            <span id="res-subnet-note" class="text-xs text-slate-300">Point-to-point ISP WAN link</span>
+            <span id="res-hosts" class="bg-[#f26b3a] text-white font-mono text-xs font-bold px-3.5 py-1.5 rounded-none">2 Usable IPs</span>
+          </div>
+        </div>
+
+        <!-- CARD 2: TIA-598-C FIBER COLOR CODE (3 cols) -->
+        <div class="lg:col-span-3 bg-[#191a1c] border border-[#2d3034] rounded-none p-6 shadow-lg flex flex-col justify-between space-y-5">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between border-b border-dashed border-[#323539] pb-3">
+              <div>
+                <h3 class="text-base font-bold text-white">Fiber Color Finder</h3>
+                <p class="text-[11px] text-slate-300">12-core buffer tube & strand lookup</p>
+              </div>
+              <span class="text-xs font-mono text-slate-200 bg-[#0f1011] border border-[#2d3034] px-2 py-0.5 rounded-none">TIA-598-C</span>
+            </div>
+
+            <div>
+              <label class="block text-slate-200 text-xs font-medium mb-1">Fiber Core / Strand # (1–144)</label>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="stepFiberNumber(-1)" class="w-10 h-10 rounded-none bg-[#242629] hover:bg-[#2e3134] border border-[#3e4146] text-slate-100 font-bold cursor-pointer">-</button>
+                <input type="number" id="fiber-num-input" min="1" max="144" value="7" oninput="runFiberColorLookup()" class="form-input flex-1 font-mono text-base font-bold text-center">
+                <button type="button" onclick="stepFiberNumber(1)" class="w-10 h-10 rounded-none bg-[#242629] hover:bg-[#2e3134] border border-[#3e4146] text-slate-100 font-bold cursor-pointer">+</button>
+              </div>
+            </div>
+
+            <div class="bg-[#0f1011] p-4 rounded-none border border-[#2a2c30] space-y-3.5">
+              <div>
+                <span id="tube-index-label" class="text-[11px] text-slate-300 block mb-1">Buffer Tube #1 (Cores 1–12)</span>
+                <div class="flex items-center gap-2.5">
+                  <span id="tube-swatch" class="w-5 h-5 rounded-none bg-blue-500 border border-slate-500"></span>
+                  <strong id="tube-color-name" class="text-white font-mono text-sm">Blue Tube</strong>
+                </div>
+              </div>
+
+              <div class="border-t border-dashed border-[#2d3034] pt-3">
+                <span id="strand-index-label" class="text-[11px] text-slate-300 block mb-1">Strand Position #7</span>
+                <div class="flex items-center gap-2.5">
+                  <span id="strand-swatch" class="w-5 h-5 rounded-none bg-red-500 border border-slate-500"></span>
+                  <strong id="strand-color-name" class="text-white font-mono text-sm">Red Strand</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-300 pt-2 border-t border-dashed border-[#323539]">
+            Used for ODF & NAP splice tray identification
+          </div>
+        </div>
+
+        <!-- CARD 3: GPON LINK ATTENUATION BUDGET (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col gap-5">
+          <div class="bg-[#191a1c] border border-[#2d3034] rounded-none p-6 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-dashed border-[#323539] pb-3">
+              <div>
+                <h3 class="text-base font-bold text-white">GPON Loss Estimator</h3>
+                <p class="text-[11px] text-slate-300">Calculates total optical link attenuation</p>
+              </div>
+              <span class="text-xs font-mono text-emerald-300 bg-emerald-950/70 border border-emerald-700/60 px-2.5 py-0.5 rounded-none font-semibold">1310/1490nm</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2.5">
+              <div>
+                <label class="block text-slate-200 text-[11px] font-medium mb-1">Span (km)</label>
+                <input type="number" id="loss-length" step="0.1" value="1.2" oninput="calcLossBudget()" class="form-input w-full font-mono font-semibold">
+              </div>
+              <div>
+                <label class="block text-slate-200 text-[11px] font-medium mb-1">Splices</label>
+                <input type="number" id="loss-splices" value="3" oninput="calcLossBudget()" class="form-input w-full font-mono font-semibold">
+              </div>
+              <div>
+                <label class="block text-slate-200 text-[11px] font-medium mb-1">Connectors</label>
+                <input type="number" id="loss-connectors" value="2" oninput="calcLossBudget()" class="form-input w-full font-mono font-semibold">
+              </div>
+            </div>
+
+            <div id="loss-formula-breakdown" class="bg-[#0f1011] border border-[#2a2c30] rounded-none px-3.5 py-2.5 text-[11px] font-mono text-slate-200">
+              0.42 dB (fiber) + 0.30 dB (splices) + 0.60 dB (connectors)
+            </div>
+          </div>
+
+          <div class="bg-[#191a1c] border border-[#f26b3a]/50 rounded-none p-6 text-white shadow-lg flex-1 flex flex-col justify-between space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-200">Estimated Total Link Loss</span>
+              <i class="fa-solid fa-bolt text-[#ff8b60]"></i>
+            </div>
+
+            <div>
+              <span id="total-loss-val" class="text-4xl font-bold text-white font-mono">1.32 dB</span>
+              <span id="remaining-budget-text" class="text-xs text-slate-300 block mt-1">26.68 dB margin remaining (Class B+ max: 28.0 dB)</span>
+            </div>
+
+            <div>
+              <span id="loss-status-badge" class="inline-block bg-[#f26b3a] text-white px-3.5 py-1.5 rounded-none font-mono font-bold text-[11px]">
+                PASS (WITHIN 28 dB CLASS B+ BUDGET)
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html> 
